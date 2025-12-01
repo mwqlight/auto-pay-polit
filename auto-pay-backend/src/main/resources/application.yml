@@ -1,0 +1,236 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: auto-pay-backend
+  profiles:
+    active: dev
+  
+  # 数据库配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/autopay?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      initial-size: 10
+      min-idle: 10
+      max-active: 30
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1 FROM DUAL
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      stat-view-servlet:
+        enabled: true
+        url-pattern: /druid/*
+        login-username: admin
+        login-password: admin
+      filter:
+        stat:
+          enabled: true
+          log-slow-sql: true
+          slow-sql-millis: 2000
+        wall:
+          enabled: true
+          config:
+            multi-statement-allow: true
+        log4j2:
+          enabled: true
+
+  # Redis配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: 
+      timeout: 3000ms
+      database: 0
+      lettuce:
+        pool:
+          max-active: 30
+          max-idle: 10
+          min-idle: 5
+          max-wait: 1000ms
+
+  # RabbitMQ配置
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    publisher-confirms: true
+    publisher-returns: true
+    template:
+      mandatory: true
+
+  # Elasticsearch配置
+  elasticsearch:
+    uris: http://localhost:9200
+    username: elastic
+    password: changeme
+
+# MyBatis Plus配置
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    call-setters-on-nulls: true
+    jdbc-type-for-null: 'null'
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+      insert-strategy: NOT_NULL
+      update-strategy: NOT_NULL
+      select-strategy: NOT_EMPTY
+  mapper-locations: classpath*:/mapper/**/*.xml
+
+# JWT配置
+jwt:
+  secret: autopay_jwt_secret_key_2024_change_in_production
+  expiration: 86400  # 24小时
+  refresh-expiration: 604800  # 7天
+
+# Knife4j配置
+knife4j:
+  enable: true
+  setting:
+    language: zh-CN
+  basic:
+    enable: true
+    username: admin
+    password: admin
+
+# 日志配置
+logging:
+  level:
+    com.autopay.backend: debug
+    org.springframework.security: debug
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/autopay.log
+
+# 管理端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# 自定义配置
+autopay:
+  # 支付渠道配置
+  channels:
+    wechat:
+      enabled: true
+      appid: ${WECHAT_APP_ID:wx1234567890abcdef}
+      secret: ${WECHAT_SECRET:your_wechat_secret}
+      mch-id: ${WECHAT_MCH_ID:your_mch_id}
+      api-key: ${WECHAT_API_KEY:your_api_key}
+    alipay:
+      enabled: true
+      app-id: ${ALIPAY_APP_ID:your_alipay_app_id}
+      private-key: ${ALIPAY_PRIVATE_KEY:your_private_key}
+      public-key: ${ALIPAY_PUBLIC_KEY:your_public_key}
+    unionpay:
+      enabled: true
+      mer-id: ${UNIONPAY_MER_ID:your_mer_id}
+      cert-path: ${UNIONPAY_CERT_PATH:config/unionpay_cert.p12}
+      cert-pass: ${UNIONPAY_CERT_PASS:your_cert_pass}
+  
+  # 安全配置
+  security:
+    # API限流配置 (TPS)
+    rate-limit:
+      default-tps: 1000
+      payment-tps: 100
+      query-tps: 5000
+    # 加密配置
+    encryption:
+      algorithm: AES-256
+      key-derivation: PBKDF2
+    # IP白名单
+    ip-whitelist:
+      - 127.0.0.1
+      - ::1
+      - 192.168.1.0/24
+  
+  # 业务配置
+  business:
+    # 订单配置
+    order:
+      expire-minutes: 30  # 订单过期时间(分钟)
+      max-retry-count: 3  # 最大重试次数
+    # 退款配置
+    refund:
+      auto-refund-enabled: true
+      refund-fee-rate: 0.006  # 退款手续费率
+    # 风控配置
+    risk:
+      enabled: true
+      high-risk-amount: 10000  # 高风险金额阈值
+      max-daily-amount: 100000  # 日限额
+  
+  # 监控配置
+  monitoring:
+    # 交易监控
+    transaction:
+      alert-threshold:
+        success-rate: 95  # 成功率低于95%报警
+        response-time: 1000  # 响应时间超过1秒报警
+        error-rate: 5  # 错误率超过5%报警
+    # 渠道监控
+    channel:
+      health-check-interval: 30  # 健康检查间隔(秒)
+      failure-threshold: 3  # 失败阈值(连续失败次数)
+
+---
+# 生产环境配置
+spring:
+  config:
+    activate:
+      on-profile: prod
+  
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/autopay?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=true&allowPublicKeyRetrieval=false
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD}
+  
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      password: ${REDIS_PASSWORD}
+  
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD}
+
+# 生产环境日志配置
+logging:
+  level:
+    root: info
+    com.autopay.backend: info
+  file:
+    name: /var/log/autopay/application.log

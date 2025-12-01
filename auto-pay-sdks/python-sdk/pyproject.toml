@@ -1,0 +1,70 @@
+[project]
+name = "autopay-sdk"
+version = "1.0.0"
+description = "AutoPay Python SDK - 简洁易用的支付SDK"
+authors = [
+    {name = "AutoPay Team", email = "team@autopay.com"},
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.7"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Office/Business :: Financial :: Point-Of-Sale",
+]
+keywords = ["payment", "alipay", "wechat", "sdk", "autopay", "mobile", "web", "china"]
+dependencies = [
+    "requests>=2.25.0",
+    "aiohttp>=3.8.0",
+    "aiohttp_socks>=0.8.0",
+    "cryptography>=3.4.0",
+    "pydantic>=1.8.0",
+    "typing-extensions>=4.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "pytest-asyncio>=0.18.0",
+    "pytest-cov>=3.0.0",
+    "pytest-mock>=3.6.0",
+    "black>=21.0.0",
+    "isort>=5.0.0",
+    "flake8>=4.0.0",
+    "mypy>=0.950",
+    "bandit>=1.7.0",
+]
+async = [
+    "aiohttp>=3.8.0",
+    "asyncio-throttle>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/autopay/python-sdk"
+Repository = "https://github.com/autopay/python-sdk.git"
+Documentation = "https://autopay.readthedocs.io/"
+Changelog = "https://github.com/autopay/python-sdk/blob/main/CHANGELOG.md"
+"Bug Tracker" = "https://github.com/autopay/python-sdk/issues"
+
+[project.scripts]
+autopay = "autopay.cli:main"
+
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools-scm>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["autopay"]
+
+[tool.setuptools.package-dir]
+"" = "src"

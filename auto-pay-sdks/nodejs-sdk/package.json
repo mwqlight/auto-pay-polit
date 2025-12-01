@@ -1,0 +1,72 @@
+{
+  "name": "@autopay/sdk",
+  "version": "1.0.0",
+  "description": "AutoPay Node.js SDK - 高性能的支付API客户端",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src --ext .ts,.js",
+    "lint:fix": "eslint src --ext .ts,.js --fix",
+    "format": "prettier --write \"src/**/*.{ts,js,json,css,md}\"",
+    "clean": "rimraf dist",
+    "prepublishOnly": "npm run clean && npm run build && npm run test"
+  },
+  "keywords": [
+    "payment",
+    "autopay",
+    "sdk",
+    "nodejs",
+    "typescript",
+    "api-client",
+    "alipay",
+    "wechat",
+    "unionpay"
+  ],
+  "author": "AutoPay Team <support@autopay.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/autopay/nodejs-sdk#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autopay/nodejs-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/autopay/nodejs-sdk/issues"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "crypto-js": "^4.2.0",
+    "qs": "^6.11.2"
+  },
+  "devDependencies": {
+    "@types/crypto-js": "^4.2.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20.0.0",
+    "@types/qs": "^6.9.10",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "eslint-config-prettier": "^9.0.0",
+    "jest": "^29.0.0",
+    "prettier": "^3.0.0",
+    "rimraf": "^5.0.0",
+    "ts-jest": "^29.0.0",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

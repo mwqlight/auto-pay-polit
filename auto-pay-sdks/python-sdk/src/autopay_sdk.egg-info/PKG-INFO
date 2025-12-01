@@ -1,0 +1,891 @@
+Metadata-Version: 2.4
+Name: autopay-sdk
+Version: 1.0.0
+Summary: AutoPay Python SDK - 简洁易用的支付SDK
+Author-email: AutoPay Team <team@autopay.com>
+License: MIT
+Project-URL: Homepage, https://github.com/autopay/python-sdk
+Project-URL: Repository, https://github.com/autopay/python-sdk.git
+Project-URL: Documentation, https://autopay.readthedocs.io/
+Project-URL: Changelog, https://github.com/autopay/python-sdk/blob/main/CHANGELOG.md
+Project-URL: Bug Tracker, https://github.com/autopay/python-sdk/issues
+Keywords: payment,alipay,wechat,sdk,autopay,mobile,web,china
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Internet :: WWW/HTTP
+Classifier: Topic :: Office/Business :: Financial :: Point-Of-Sale
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+Requires-Dist: requests>=2.25.0
+Requires-Dist: aiohttp>=3.8.0
+Requires-Dist: aiohttp_socks>=0.8.0
+Requires-Dist: cryptography>=3.4.0
+Requires-Dist: pydantic>=1.8.0
+Requires-Dist: typing-extensions>=4.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=6.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.18.0; extra == "dev"
+Requires-Dist: pytest-cov>=3.0.0; extra == "dev"
+Requires-Dist: pytest-mock>=3.6.0; extra == "dev"
+Requires-Dist: black>=21.0.0; extra == "dev"
+Requires-Dist: isort>=5.0.0; extra == "dev"
+Requires-Dist: flake8>=4.0.0; extra == "dev"
+Requires-Dist: mypy>=0.950; extra == "dev"
+Requires-Dist: bandit>=1.7.0; extra == "dev"
+Provides-Extra: async
+Requires-Dist: aiohttp>=3.8.0; extra == "async"
+Requires-Dist: asyncio-throttle>=1.0.0; extra == "async"
+
+# AutoPay Python SDK
+
+[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://python.org)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
+
+简洁易用的支付服务 Python SDK，支持同步/异步操作，完整类型提示，内置重试机制。
+
+## ✨ 特性
+
+- 🚀 **简洁易用**: 一行代码创建支付，链式调用更优雅
+- 🔄 **同步/异步**: 支持同步和异步两种编程模式
+- 🔒 **类型安全**: 完整的类型提示，IDE智能提示支持
+- 🛡️ **错误处理**: 完善的异常体系，精准错误定位
+- ⚡ **高性能**: 连接池复用，支持请求并发
+- 🔄 **智能重试**: 网络异常自动重试，可配置策略
+- 📊 **数据完整**: 所有API接口全覆盖
+- 🧪 **测试完善**: 单元测试覆盖率>90%
+
+## 📦 安装
+
+### 使用 pip 安装
+
+```bash
+pip install autopay-sdk
+```
+
+### 开发版本安装
+
+```bash
+git clone https://github.com/autopay/python-sdk.git
+cd python-sdk
+pip install -e .
+```
+
+### 完整功能安装
+
+```bash
+# 包含所有可选依赖
+pip install autopay-sdk[dev,async,all]
+```
+
+## 🚀 快速开始
+
+### 基础使用
+
+```python
+from autopay import create_client
+
+# 创建客户端
+client = create_client(
+    api_key="your_api_key",
+    secret_key="your_secret_key",
+    environment="sandbox"  # sandbox 或 production
+)
+
+# 创建支付
+payment = client.get_payment_service().create_payment({
+    "amount": 100.00,
+    "currency": "CNY",
+    "method": "alipay",
+    "description": "测试订单",
+    "order_id": "ORDER_123456"
+})
+
+print(f"支付ID: {payment.payment_id}")
+print(f"支付URL: {payment.payment_url}")
+
+# 验证支付状态
+is_success = client.verify_payment(payment.payment_id)
+print(f"支付是否成功: {is_success}")
+
+# 清理资源
+client.cleanup()
+```
+
+### 异步使用
+
+```python
+import asyncio
+from autopay import AsyncHttpClient, Config
+
+async def async_example():
+    config = Config(
+        api_key="your_api_key",
+        secret_key="your_secret_key",
+        environment="sandbox"
+    )
+    
+    async with AsyncHttpClient(config) as http_client:
+        # 并发创建多个支付
+        tasks = []
+        for i in range(5):
+            task = http_client.post('/api/v1/payments', {
+                "amount": 100.00 + i * 10,
+                "currency": "CNY", 
+                "method": "wechat_pay",
+                "description": f"订单{i+1}"
+            })
+            tasks.append(task)
+        
+        results = await asyncio.gather(*tasks)
+        
+        for i, result in enumerate(results):
+            print(f"订单{i+1}: {result.get('data', {}).get('payment_id')}")
+
+# 运行异步函数
+asyncio.run(async_example())
+```
+
+### 高级功能
+
+```python
+from autopay import AutoPayService, PaymentRequest, PaymentMethod, Decimal
+
+# 使用配置构建器
+from autopay.config import ConfigBuilder
+
+config = ConfigBuilder() \
+    .with_api_key("your_api_key") \
+    .with_secret_key("your_secret_key") \
+    .with_environment("sandbox") \
+    .with_timeout(60) \
+    .with_retry_config(max_retries=3, base_delay=1.0) \
+    .build()
+
+client = AutoPayService(config)
+
+# 创建复杂支付
+payment_request = PaymentRequest(
+    amount=Decimal("299.99"),
+    currency="CNY",
+    method=PaymentMethod.WECHAT_PAY,
+    description="高级功能测试",
+    notify_url="https://your-domain.com/webhook",
+    return_url="https://your-domain.com/return"
+)
+
+payment_response = client.get_payment_service().create_payment(payment_request)
+
+# 获取渠道健康状态
+health_summary = client.get_channel_health_summary()
+print(f"健康渠道数: {health_summary['healthy_channels']}")
+
+# 批量退款
+batch_refunds = [
+    {"payment_id": "pay_123", "amount": 50.00, "reason": "商品质量问题"},
+    {"payment_id": "pay_124", "amount": 30.00, "reason": "重复下单"}
+]
+
+result = client.batch_refund(batch_refunds)
+print(f"批量退款结果: {result}")
+```
+
+## 📚 API 文档
+
+### 核心类
+
+#### AutoPayService
+主要的SDK入口类，统一管理所有服务模块。
+
+```python
+class AutoPayService:
+    def create(**config_kwargs) -> AutoPayService
+    def get_payment_service() -> PaymentService
+    def get_refund_service() -> RefundService
+    def get_channel_service() -> ChannelService
+    def get_account_service() -> AccountService
+    def get_system_service() -> SystemService
+    def get_webhook_service() -> WebhookService
+```
+
+#### 支付服务 (PaymentService)
+
+```python
+class PaymentService:
+    def create_payment(request: PaymentRequest) -> PaymentResponse
+    def query_payment(payment_id: str) -> PaymentInfo
+    def close_payment(payment_id: str) -> bool
+    def get_payment_list(params: PaymentListRequest) -> PaginatedResponse[PaymentInfo]
+    def get_payment_statistics(params: StatisticsRequest) -> StatisticsResponse
+    def verify_payment(payment_id: str, order_id: str = None) -> Dict[str, Any]
+    def cancel_payment(payment_id: str) -> bool
+```
+
+#### 退款服务 (RefundService)
+
+```python
+class RefundService:
+    def create_refund(request: RefundRequest) -> RefundResponse
+    def query_refund(refund_id: str) -> RefundInfo
+    def cancel_refund(refund_id: str) -> bool
+    def get_refund_list(params: RefundListRequest) -> PaginatedResponse[RefundInfo]
+    def get_refund_statistics(params: StatisticsRequest) -> StatisticsResponse
+    def batch_refund(refunds: List[Dict[str, Any]]) -> Dict[str, Any]
+```
+
+#### 渠道服务 (ChannelService)
+
+```python
+class ChannelService:
+    def get_channels(params: ChannelListRequest) -> PaginatedResponse[ChannelInfo]
+    def get_channel(channel_id: str) -> ChannelInfo
+    def get_default_channel(method: PaymentMethod) -> ChannelInfo
+    def update_channel_status(channel_id: str, status: ChannelStatus) -> bool
+    def get_channel_health() -> List[ChannelHealth]
+    def get_channel_statistics(params: StatisticsRequest) -> ChannelStatistics
+    def test_channel_connectivity(channel_id: str) -> Dict[str, Any]
+```
+
+### 数据模型
+
+#### 支付相关
+
+```python
+class PaymentRequest(BaseModel):
+    amount: Decimal
+    currency: str
+    method: PaymentMethod
+    description: Optional[str] = None
+    order_id: Optional[str] = None
+    notify_url: Optional[str] = None
+    return_url: Optional[str] = None
+
+class PaymentResponse(BaseModel):
+    payment_id: str
+    order_id: str
+    amount: Decimal
+    currency: str
+    method: PaymentMethod
+    status: PaymentStatus
+    payment_url: Optional[str] = None
+    qr_code: Optional[str] = None
+    created_at: datetime
+    expires_at: Optional[datetime] = None
+```
+
+#### 退款相关
+
+```python
+class RefundRequest(BaseModel):
+    payment_id: str
+    amount: Decimal
+    reason: str
+    type: RefundType = RefundType.PARTIAL
+    metadata: Optional[Dict[str, Any]] = None
+
+class RefundResponse(BaseModel):
+    refund_id: str
+    payment_id: str
+    amount: Decimal
+    reason: str
+    status: RefundStatus
+    created_at: datetime
+    processed_at: Optional[datetime] = None
+```
+
+### 异常处理
+
+SDK提供完整的异常体系：
+
+```python
+from autopay.exceptions import (
+    AutoPayException,           # 基础异常
+    ConfigurationException,     # 配置错误
+    ValidationException,        # 参数验证错误
+    NetworkException,           # 网络错误
+    TimeoutException,           # 超时错误
+    AuthenticationException,    # 认证错误
+    RateLimitException,         # 频率限制
+    BusinessException,          # 业务错误
+    ServiceUnavailableException # 服务不可用
+)
+
+try:
+    payment = client.get_payment_service().create_payment(request)
+except ValidationException as e:
+    print(f"参数错误: {e}")
+except NetworkException as e:
+    print(f"网络错误: {e}")
+    # 可以配置重试策略
+except Exception as e:
+    print(f"其他错误: {e}")
+```
+
+## 🛠️ 配置选项
+
+### 环境配置
+
+```python
+from autopay import Environment
+
+# 支持的环境
+Environment.SANDBOX      # 沙箱环境
+Environment.PRODUCTION   # 生产环境
+```
+
+### 客户端配置
+
+```python
+from autopay.config import ConfigBuilder
+
+config = ConfigBuilder() \
+    .with_api_key("your_api_key") \
+    .with_secret_key("your_secret_key") \
+    .with_environment(Environment.SANDBOX) \
+    .with_base_url("https://api.autopay.com") \
+    .with_timeout(30) \
+    .with_connect_timeout(10) \
+    .with_read_timeout(30) \
+    .with_retry_config(max_retries=3, base_delay=1.0, max_delay=60.0) \
+    .with_rate_limit(requests=100, window=60) \
+    .with_proxy_url("http://proxy.com:8080") \
+    .with_user_agent("YourApp/1.0") \
+    .build()
+```
+
+### 完整配置参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `api_key` | str | - | API密钥 |
+| `secret_key` | str | - | 密钥 |
+| `environment` | Environment | SANDBOX | 环境 |
+| `base_url` | str | - | 基础URL |
+| `timeout_seconds` | int | 30 | 请求超时 |
+| `connect_timeout_seconds` | int | 10 | 连接超时 |
+| `read_timeout_seconds` | int | 30 | 读取超时 |
+| `max_retries` | int | 3 | 最大重试次数 |
+| `base_delay` | float | 1.0 | 重试基础延迟 |
+| `max_delay` | float | 60.0 | 最大延迟 |
+| `rate_limit_requests` | int | 100 | 请求频率限制 |
+| `rate_limit_window` | int | 60 | 频率限制窗口(秒) |
+| `proxy_url` | str | None | 代理URL |
+| `user_agent` | str | None | 用户代理 |
+| `enable_logging` | bool | True | 是否启用日志 |
+| `connection_pool_size` | int | 100 | 连接池大小 |
+| `connection_pool_size_per_host` | int | 30 | 每主机连接池大小 |
+
+## 🔧 工具函数
+
+SDK提供丰富的工具函数：
+
+```python
+from autopay import (
+    generate_order_id,      # 生成订单号
+    generate_payment_id,    # 生成支付号
+    generate_signature,     # 生成签名
+    verify_signature,       # 验证签名
+    format_decimal,         # 格式化小数
+    format_currency,        # 格式化货币
+    mask_sensitive_data,    # 掩码敏感数据
+    calculate_percentage,   # 计算百分比
+    retry_with_backoff,     # 重试装饰器
+    validate_required_fields # 验证必填字段
+)
+
+# 生成订单号
+order_id = generate_order_id("ORDER")
+
+# 格式化金额
+amount_str = format_decimal("123.456", 2)  # "123.46"
+
+# 掩码敏感信息
+masked_card = mask_sensitive_data("1234567890123456")  # "12********3456"
+```
+
+## 🧪 测试
+
+### 运行测试
+
+```bash
+# 安装开发依赖
+pip install -e ".[dev]"
+
+# 运行所有测试
+pytest
+
+# 运行特定测试文件
+pytest tests/test_payment.py
+
+# 运行测试并生成覆盖率报告
+pytest --cov=autopay tests/
+
+# 并行运行测试
+pytest -n auto
+```
+
+### 测试结构
+
+```
+tests/
+├── test_config.py          # 配置测试
+├── test_client.py          # 客户端测试
+├── test_payment.py         # 支付服务测试
+├── test_refund.py          # 退款服务测试
+├── test_channel.py         # 渠道服务测试
+├── test_account.py         # 账户服务测试
+├── test_system.py          # 系统服务测试
+├── test_webhook.py         # Webhook服务测试
+├── test_exceptions.py      # 异常处理测试
+├── test_utils.py           # 工具函数测试
+├── conftest.py             # 测试配置
+└── fixtures/               # 测试数据
+```
+
+### 编写测试
+
+```python
+import pytest
+from autopay import create_client, PaymentRequest, PaymentMethod
+from autopay.exceptions import ValidationException
+
+class TestPaymentService:
+    def test_create_payment_success(self):
+        client = create_client(
+            api_key="test_key",
+            secret_key="test_secret",
+            environment="sandbox"
+        )
+        
+        payment = client.get_payment_service().create_payment({
+            "amount": 100.00,
+            "currency": "CNY",
+            "method": "alipay",
+            "description": "测试订单"
+        })
+        
+        assert payment.payment_id is not None
+        assert payment.amount == 100.00
+        assert payment.currency == "CNY"
+    
+    def test_create_payment_invalid_amount(self):
+        client = create_client(
+            api_key="test_key",
+            secret_key="test_secret", 
+            environment="sandbox"
+        )
+        
+        with pytest.raises(ValidationException):
+            client.get_payment_service().create_payment({
+                "amount": -100,  # 负数金额
+                "currency": "CNY",
+                "method": "alipay"
+            })
+```
+
+## 📋 最佳实践
+
+### 1. 配置管理
+
+```python
+# 推荐：使用配置构建器
+from autopay.config import ConfigBuilder
+
+config = ConfigBuilder() \
+    .with_api_key(os.environ["AUTOPAY_API_KEY"]) \
+    .with_secret_key(os.environ["AUTOPAY_SECRET_KEY"]) \
+    .with_environment("sandbox" if DEBUG else "production") \
+    .with_timeout(30) \
+    .build()
+
+client = AutoPayService(config)
+```
+
+### 2. 错误处理
+
+```python
+from autopay.exceptions import (
+    NetworkException, 
+    ValidationException, 
+    RateLimitException
+)
+
+def create_payment_safe(request):
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            return client.get_payment_service().create_payment(request)
+        except NetworkException as e:
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(2 ** attempt)  # 指数退避
+        except ValidationException as e:
+            # 验证错误不重试
+            raise
+        except RateLimitException as e:
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(60)  # 等待1分钟
+```
+
+### 3. 异步编程
+
+```python
+import asyncio
+from autopay import AsyncHttpClient
+
+async def create_multiple_payments():
+    async with AsyncHttpClient(config) as http_client:
+        # 使用信号量限制并发
+        sem = asyncio.Semaphore(10)
+        
+        async def create_single_payment(i):
+            async with sem:
+                return await http_client.post('/api/v1/payments', {
+                    "amount": 100.00 + i * 10,
+                    "currency": "CNY",
+                    "method": "alipay"
+                })
+        
+        # 创建20个支付
+        tasks = [create_single_payment(i) for i in range(20)]
+        results = await asyncio.gather(*tasks)
+        
+        return results
+```
+
+### 4. Webhook处理
+
+```python
+from autopay import WebhookService, WebhookEvent
+
+webhook_service = WebhookService(http_client, secret_key)
+
+# 事件处理器映射
+event_handlers = {
+    "payment.succeeded": handle_payment_succeeded,
+    "payment.failed": handle_payment_failed,
+    "refund.succeeded": handle_refund_succeeded,
+}
+
+webhook_service.register_event_handlers(event_handlers)
+
+# 在Flask/Django视图函数中使用
+@app.route('/webhook', methods=['POST'])
+def autopay_webhook():
+    payload = request.get_json()
+    signature = request.headers.get('X-AutoPay-Signature')
+    
+    try:
+        result = webhook_service.handle_webhook(payload, signature)
+        return {'status': 'success'}, 200
+    except InvalidSignatureException:
+        return {'status': 'invalid_signature'}, 400
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}, 500
+```
+
+### 5. 性能优化
+
+```python
+# 1. 使用连接池
+config = ConfigBuilder() \
+    .with_connection_pool_size(100) \
+    .with_connection_pool_size_per_host(30) \
+    .build()
+
+# 2. 启用HTTP/2
+config = ConfigBuilder() \
+    .with_http_version("2") \
+    .build()
+
+# 3. 使用异步客户端
+async with AsyncHttpClient(config) as http_client:
+    # 并发请求
+    tasks = [http_client.get(f'/api/v1/payments/{i}') for i in range(100)]
+    results = await asyncio.gather(*tasks)
+
+# 4. 批量操作
+batch_requests = [
+    {"method": "GET", "endpoint": "/api/v1/payments/1"},
+    {"method": "GET", "endpoint": "/api/v1/payments/2"},
+    # ...
+]
+results = await http_client.batch_request(batch_requests)
+```
+
+## 🔗 集成指南
+
+### FastAPI 集成
+
+```python
+from fastapi import FastAPI, Depends
+from autopay import AutoPayService
+
+app = FastAPI()
+
+# 创建全局客户端
+config = ConfigBuilder().from_environment().build()
+autopay_client = AutoPayService(config)
+
+@app.post("/payments")
+async def create_payment(
+    request: PaymentRequest,
+    client: AutoPayService = Depends(get_autopay_client)
+):
+    try:
+        payment = client.get_payment_service().create_payment(request)
+        return {"payment_id": payment.payment_id}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/payments/{payment_id}")
+async def get_payment(
+    payment_id: str,
+    client: AutoPayService = Depends(get_autopay_client)
+):
+    try:
+        payment = client.get_payment_service().query_payment(payment_id)
+        return payment.dict()
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+```
+
+### Django 集成
+
+```python
+# settings.py
+AUTOPAY_CONFIG = {
+    'api_key': os.getenv('AUTOPAY_API_KEY'),
+    'secret_key': os.getenv('AUTOPAY_SECRET_KEY'),
+    'environment': 'sandbox' if DEBUG else 'production',
+}
+
+# utils.py
+from django.conf import settings
+from autopay import AutoPayService, ConfigBuilder
+
+def get_autopay_client():
+    config = ConfigBuilder() \
+        .with_api_key(settings.AUTOPAY_CONFIG['api_key']) \
+        .with_secret_key(settings.AUTOPAY_CONFIG['secret_key']) \
+        .with_environment(settings.AUTOPAY_CONFIG['environment']) \
+        .build()
+    
+    return AutoPayService(config)
+
+# views.py
+from django.http import JsonResponse
+from .utils import get_autopay_client
+
+def create_payment_view(request):
+    if request.method == 'POST':
+        client = get_autopay_client()
+        
+        try:
+            payment = client.get_payment_service().create_payment({
+                "amount": 100.00,
+                "currency": "CNY",
+                "method": "alipay"
+            })
+            
+            return JsonResponse({
+                "payment_id": payment.payment_id,
+                "payment_url": payment.payment_url
+            })
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
+```
+
+### Flask 集成
+
+```python
+from flask import Flask, request, jsonify
+from autopay import AutoPayService
+
+app = Flask(__name__)
+
+# 创建全局客户端
+config = ConfigBuilder() \
+    .with_api_key(os.getenv('AUTOPAY_API_KEY')) \
+    .with_secret_key(os.getenv('AUTOPAY_SECRET_KEY')) \
+    .with_environment('sandbox') \
+    .build()
+
+client = AutoPayService(config)
+
+@app.route('/payments', methods=['POST'])
+def create_payment():
+    data = request.get_json()
+    
+    try:
+        payment = client.get_payment_service().create_payment(data)
+        return jsonify({
+            "payment_id": payment.payment_id,
+            "payment_url": payment.payment_url
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route('/webhook', methods=['POST'])
+def autopay_webhook():
+    # Webhook处理逻辑
+    payload = request.get_json()
+    signature = request.headers.get('X-AutoPay-Signature')
+    
+    # 验证和处理逻辑
+    return jsonify({"status": "ok"})
+```
+
+## 📈 监控和日志
+
+### 日志配置
+
+```python
+import logging
+from autopay import create_client
+
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('autopay.log'),
+        logging.StreamHandler()
+    ]
+)
+
+client = create_client(
+    api_key="your_api_key",
+    secret_key="your_secret_key",
+    environment="production",
+    enable_logging=True
+)
+```
+
+### 性能监控
+
+```python
+from autopay import AutoPayService
+import time
+
+class MonitoredAutoPayService(AutoPayService):
+    def __init__(self, config):
+        super().__init__(config)
+        self.metrics = {
+            'request_count': 0,
+            'error_count': 0,
+            'total_response_time': 0,
+            'average_response_time': 0
+        }
+    
+    def _record_request(self, response_time: float, is_error: bool = False):
+        self.metrics['request_count'] += 1
+        self.metrics['total_response_time'] += response_time
+        
+        if is_error:
+            self.metrics['error_count'] += 1
+        
+        self.metrics['average_response_time'] = (
+            self.metrics['total_response_time'] / self.metrics['request_count']
+        )
+    
+    def get_metrics(self):
+        return {
+            **self.metrics,
+            'error_rate': self.metrics['error_count'] / self.metrics['request_count']
+        }
+```
+
+## 🤝 贡献指南
+
+我们欢迎社区贡献！请按照以下步骤参与贡献：
+
+### 开发环境设置
+
+```bash
+# 克隆仓库
+git clone https://github.com/autopay/python-sdk.git
+cd python-sdk
+
+# 创建虚拟环境
+python -m venv venv
+source venv/bin/activate  # Linux/macOS
+# venv\Scripts\activate  # Windows
+
+# 安装开发依赖
+pip install -e ".[dev]"
+
+# 安装pre-commit钩子
+pre-commit install
+```
+
+### 贡献流程
+
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启 Pull Request
+
+### 代码规范
+
+- 遵循 [PEP 8](https://pep8.org/) 代码风格
+- 添加完整的类型提示
+- 编写单元测试
+- 更新相关文档
+- 确保所有测试通过
+
+### 开发规范
+
+```bash
+# 代码格式化
+black src/ tests/
+
+# 导入排序
+isort src/ tests/
+
+# 代码检查
+flake8 src/ tests/
+mypy src/
+
+# 运行测试
+pytest
+```
+
+## 📝 更新日志
+
+### v1.0.0 (2024-01-01)
+- 🎉 初始版本发布
+- ✨ 完整的支付功能支持
+- 🔄 同步和异步客户端
+- 🛡️ 完整的异常处理体系
+- 📚 详细的文档和示例
+
+## 📞 支持
+
+- 📧 邮箱: sdk@autopay.com
+- 💬 微信: AutoPay-SDK
+- 📚 文档: https://docs.autopay.com/sdk/python
+- 🐛 Bug报告: https://github.com/autopay/python-sdk/issues
+- 💡 功能建议: https://github.com/autopay/python-sdk/discussions
+
+## 📄 许可证
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+
+## 🙏 致谢
+
+感谢所有为本项目做出贡献的开发者！
+
+---
+
+**Made with ❤️ by AutoPay SDK Team**
